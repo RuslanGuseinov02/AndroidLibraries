@@ -33,3 +33,28 @@ internal sealed class ResourceState<out T> {
     data class Success<T>(val data: T) : ResourceState<T>()
     data class Error(val message: String) : ResourceState<Nothing>()
 }
+
+// Base View Model
+abstract class BaseViewModel<State: UIState, Action: UIAction, Effect: UISideEffect> : ViewModel() {
+    protected val mutableUIState: MutableStateFlow<State> by lazy { MutableStateFlow(getInitialState()) }
+    val uiState: StateFlow<State> by lazy { mutableUIState }
+
+    protected val mutableUIEffect: MutableSharedFlow<Effect> by lazy { MutableSharedFlow(extraBufferCapacity = 1) }
+    val sideEffect: SharedFlow<Effect> = mutableUIEffect
+
+    abstract fun getInitialState(): State
+
+    abstract fun onAction(action: Action)
+
+    protected suspend fun sendEffect(effect: () -> Effect) {
+        mutableUIEffect.emit(effect())
+    }
+
+    protected fun trySendEffect(effect: () -> Effect) {
+        mutableUIEffect.tryEmit(effect())
+    }
+
+    protected fun updateState(modifier: State.() -> State) {
+        mutableUIState.update(modifier)
+    }
+}
