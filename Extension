@@ -1,0 +1,35 @@
+// Resource State
+internal inline fun <T> ResourceState<T>.onSuccess(
+    action: (T) -> Unit
+): ResourceState<T> {
+    if (this is ResourceState.Success){
+        action(data)
+    }
+    return this
+}
+
+internal inline fun <T> ResourceState<T>.orError(
+    action: (String) -> Unit
+) : ResourceState<T> {
+    if (this is ResourceState.Error) {
+        action(message)
+    }
+    return this
+}
+
+// Safe Api Call
+internal fun <T> safeApiCall(
+    call: suspend () -> T
+): Flow<ResourceState<T>> = flow {
+    try {
+        val result = call()
+        emit(ResourceState.Success(result))
+    } catch (e: Exception) {
+        emit(ResourceState.Error(e.message.orEmpty()))
+    }
+}.flowOn(Dispatchers.IO)
+
+internal sealed class ResourceState<out T> {
+    data class Success<T>(val data: T) : ResourceState<T>()
+    data class Error(val message: String) : ResourceState<Nothing>()
+}
